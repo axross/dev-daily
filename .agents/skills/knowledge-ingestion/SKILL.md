@@ -55,9 +55,10 @@ The eight steps below are sequential at the queue level. Per-row work in steps 2
 ### Step 3 — Write the summary into the row
 
 - MUST update the row via `notion-update-page` with `command: replace_content` and the summary as `new_str`.
+- The summary MUST be written in the same language as the source article — Japanese sources stay in Japanese (日本語), English sources stay in English. MUST NOT translate across languages: the user reads both fluently and prefers the source language because translation loses nuance and terminology used by the original author. The source-language rule applies to every prose element of the summary (section headings, body paragraphs, bolded phrases, block quotes).
 - The summary MUST follow this format:
-  - Lead with a callout linking back to the source: `> 🔗 Source: [Site name — Article title](URL)`.
   - 1–12 H2 (`##`) sections, each with 2–5 paragraphs of prose. Section count scales with article substance — short notes use 1–2; deep technical posts use 8–12.
+  - MUST NOT include a "Source" link, callout, or back-reference to the article URL anywhere in the page content; the row's `URL` property already carries that link, so duplicating it inside the summary is redundant clutter.
   - SHOULD use the source's own framing where it aids comprehension; quote sparingly with `**bold**` or block quotes for genuinely notable lines.
   - MUST NOT be bullet-only; bullets MAY appear inside sections for enumerations.
 
