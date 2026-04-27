@@ -1,0 +1,7 @@
+{"domain":"medium.com","reason":"per-author platform with very low editorial floor; SEO-optimized listicles dominate the surface. Reject by default; if the author has independent authority elsewhere, prefer the canonical link on their own site.","added_at":"2026-04-26"}
+{"domain":"dev.to","reason":"per-author platform; bulk listicles and 'Top X in YEAR' SEO content dominate. Reject by default; route exceptions through the content-depth scorecard.","added_at":"2026-04-26"}
+{"domain":"hackernoon.com","reason":"SEO content-farm patterns: keyword-stuffed titles, no editorial review, recycled primary content.","added_at":"2026-04-26"}
+{"domain":"geeksforgeeks.org","reason":"tutorial-mill SEO farm; content is shallow and frequently auto-generated against trending search terms.","added_at":"2026-04-26"}
+{"domain":"tutorialspoint.com","reason":"tutorial-mill SEO farm; same pattern as geeksforgeeks.","added_at":"2026-04-26"}
+{"domain":"javascript.plainenglish.io","reason":"Medium-publication SEO listicle network; not a primary source.","added_at":"2026-04-26"}
+{"domain":"betterprogramming.pub","reason":"Medium-publication SEO listicle network; not a primary source.","added_at":"2026-04-26"}

@@ -49,7 +49,7 @@ The eight steps below are sequential at the queue level. Per-row work in steps 2
 
 - MUST fetch the source URL with `WebFetch`, requesting "main argument, key technical points, examples, conclusions, and direct quotes where notable" so the response is rich enough to summarize from.
 - For HTTP 404 or wrong slug, SHOULD fetch the publication's date-indexed listing for the article's published date, find the correct slug, and retry.
-- For responses that contain only navigation chrome (a recurring failure on `thenewstack.io`, `infoq.com`, and similar JS-heavy sites), MUST fall back to `WebSearch` for the article title plus author plus key terms; reconstruct from snippets plus background knowledge.
+- For responses that contain only navigation chrome (a recurring failure on `thenewstack.io`, `infoq.com`, and similar JS-heavy sites), MUST fall back to `WebSearch` for the article title plus author plus key terms; reconstruct from snippets plus background knowledge. When the article title is non-English (e.g., Japanese), MUST use the original-language title string verbatim in the search query; MUST NOT translate the title or paraphrase it — translation breaks search-snippet recall and produces hallucinated reconstructions.
 - MUST NOT fabricate content from the title alone; if both `WebFetch` and `WebSearch` fail to surface the article's actual claims, MUST leave the row at `Status = New` and report the row as skipped.
 
 ### Step 3 — Write the summary into the row
