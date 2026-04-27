@@ -1,20 +1,20 @@
 ---
 name: knowledge-ingestion
-description: Apply this skill to process the Knowledge Base › Articles queue end-to-end — read every row with Status "New", write a structured 1–12 section summary into the row's page content, transition the row to "Summarized", then synthesize wiki-style reference sub-pages under the Knowledge Base page for summaries that warrant foundational treatment. Trigger whenever the user asks to "process my Knowledge Base", "summarize new articles", "ingest my reading queue", "catch me up on my KB", "run the weekly KB refresh", or any unread/new-articles request against the user's Notion knowledge base — even when the user does not name "Notion" or "wiki" explicitly. Do not trigger for general Notion editing, single-article summarization unrelated to the queue, or wiki creation without a corresponding queued row.
+description: Apply this skill to process the Knowledge Base › Articles queue end-to-end — read every row with Status "New", write a structured 1–12 section summary into the row's page content, transition the row to "Summarized", synthesize wiki-style reference sub-pages under the Knowledge Base page for summaries that warrant foundational treatment, and append a glanceable per-run update to the current month's Knowledge Base › Updates page. Trigger whenever the user asks to "process my Knowledge Base", "summarize new articles", "ingest my reading queue", "catch me up on my KB", "run the weekly KB refresh", or any unread/new-articles request against the user's Notion knowledge base — even when the user does not name "Notion" or "wiki" explicitly. Do not trigger for general Notion editing, single-article summarization unrelated to the queue, or wiki creation without a corresponding queued row.
 ---
 
 # Knowledge Ingestion
 
-Process the *Knowledge Base › Articles* queue end-to-end: every row with `Status = New` is summarized into its own page content and transitioned to `Summarized`; summaries that warrant foundational treatment then become wiki-style reference sub-pages filed under the Knowledge Base index page.
+Process the *Knowledge Base › Articles* queue end-to-end: every row with `Status = New` is summarized into its own page content and transitioned to `Summarized`; summaries that warrant foundational treatment then become wiki-style reference sub-pages filed under the Knowledge Base index page; and a glanceable summary of the run is appended to the current month's Knowledge Base › Updates page.
 
-This skill governs **the summarize-then-synthesize procedure** and **the Knowledge Base index-page conventions** that wiki filing relies on. Articles database identity, property schema, status lifecycle, dedup contract, and Topics vocabulary defer to [../notion-article-database/SKILL.md](../notion-article-database/SKILL.md) — consult it before any read or write against the Articles data source.
+This skill governs **the summarize-then-synthesize procedure**, **the Knowledge Base index-page conventions** that wiki filing relies on, and **the monthly Updates-page conventions** that run logging relies on. Articles database identity, property schema, status lifecycle, dedup contract, and Topics vocabulary defer to [../notion-article-database/SKILL.md](../notion-article-database/SKILL.md) — consult it before any read or write against the Articles data source.
 
 ## Scope
 
-- IN scope: reading the queue (`Status = New`), writing summary content into the row's page, the `New → Summarized` transition, deciding which summaries warrant a wiki, authoring the wiki, and filing it under the Knowledge Base index page (creating a `###` section when no existing one fits).
+- IN scope: reading the queue (`Status = New`), writing summary content into the row's page, the `New → Summarized` transition, deciding which summaries warrant a wiki, authoring the wiki, filing it under the Knowledge Base index page (creating a `###` section when no existing one fits), and posting a per-run update to the current month's Updates page (creating the monthly page or today's date section when missing).
 - OUT of scope: Articles database identity / schema / dedup / Topics vocabulary (defer to [../notion-article-database/SKILL.md](../notion-article-database/SKILL.md)); article discovery and import (the [tech-news-fetch](../tech-news-fetch/SKILL.md) skill owns this); the `Summarized → Archived` transition (a separate cleanup concern).
 
-## Knowledge Base Page Conventions
+## Knowledge Base Index Page
 
 The Knowledge Base index page (`https://www.notion.so/34ba88827414805d8ef8ea0e95f49bd6`) is the parent of every wiki sub-page produced by this skill. The conventions below apply only when this skill edits the index or creates a child page under it.
 
@@ -25,9 +25,20 @@ The Knowledge Base index page (`https://www.notion.so/34ba88827414805d8ef8ea0e95
 - New section names on the index MUST match the Articles `Topics` vocabulary verbatim (see [../notion-article-database/SKILL.md](../notion-article-database/SKILL.md)) — do not invent variants.
 - Heading-level promotion (e.g., `####` → `###`) MUST be a deliberate structural decision; routine ingestion runs MUST preserve existing heading levels unless the user has signaled otherwise.
 
+## Knowledge Base Updates Pages
+
+The `## Updates` H2 section on the Knowledge Base index page links to monthly changelog sub-pages (e.g., `April 2026`) where this skill posts a per-run summary. The conventions below apply when this skill creates or edits a monthly page or its date sections.
+
+- Monthly page titles MUST follow the format `<Month> <YYYY>` (e.g., `April 2026`); ignore any incidental trailing whitespace on existing pages and do not reproduce it on new ones.
+- A monthly page MUST be created as a direct child of the Knowledge Base page when the current month does not yet have one; the new page MUST then be linked from the `## Updates` section of the index using the page-link-block format from [Knowledge Base Index Page](#knowledge-base-index-page).
+- Each calendar day on a monthly page MUST have a single H2 date heading in the format `<Day-abbr>, <Month> <Day-with-suffix>` (e.g., `Sun, April 26th`); date sections MUST appear in reverse chronological order, with today at the top and the oldest at the bottom.
+- A new date section MUST be inserted at the very top of the monthly page, above the previous most-recent section — never appended at the bottom.
+- Updates inside a date section MUST be a short list of 2–4 bullets with **markdown links** (`[Title](URL)`) to touched pages; the `<page>` link block format MUST NOT be used here — that form is reserved for the index/directory.
+- Each bullet SHOULD pack one category (e.g., articles summarized, wikis created, structural changes) with inline page links; the goal is a glanceable changelog the user can scan in seconds, not a per-row enumeration.
+
 ## Workflow
 
-The seven steps below are sequential at the queue level. Per-row work in steps 2–4 SHOULD parallelize across rows; per-wiki work in steps 6–7 SHOULD parallelize across wiki candidates.
+The eight steps below are sequential at the queue level. Per-row work in steps 2–4 SHOULD parallelize across rows; per-wiki work in steps 6–7 SHOULD parallelize across wiki candidates; step 8 runs once at the end of the run.
 
 ### Step 1 — Read the queue
 
@@ -76,14 +87,22 @@ The seven steps below are sequential at the queue level. Per-row work in steps 2
 
 ### Step 7 — File each wiki under the Knowledge Base
 
-- MUST create the wiki via `notion-create-pages` with `parent.type: "page_id"` and the Knowledge Base page ID; this anchors the parent relationship described in [Knowledge Base Page Conventions](#knowledge-base-page-conventions).
+- MUST create the wiki via `notion-create-pages` with `parent.type: "page_id"` and the Knowledge Base page ID; this anchors the parent relationship described in [Knowledge Base Index Page](#knowledge-base-index-page).
 - MUST match the article's `Topics` value (or its closest fit) to an existing `###` heading on the index. When no existing section fits, MUST add a new `###` heading whose name matches the Articles `Topics` vocabulary verbatim.
 - MUST insert a `<page>` link block under the chosen section via `notion-update-page` `command: update_content`, anchoring `old_str` on the section heading:
   ```
   old_str: "### <Section Name>"
   new_str: "### <Section Name>\n\n<page url=\"https://www.notion.so/<dashed-id>\">Title</page>"
   ```
-- Page link block format and URL form MUST follow [Knowledge Base Page Conventions](#knowledge-base-page-conventions); link block creation will silently fail otherwise.
+- Page link block format and URL form MUST follow [Knowledge Base Index Page](#knowledge-base-index-page); link block creation will silently fail otherwise.
+
+### Step 8 — Log the run to the monthly Updates page
+
+- MUST locate the current month's Updates page (e.g., `April 2026`); the page is reachable via the `## Updates` section of the Knowledge Base index, or directly via `notion-search`.
+- If the current month's page does not exist, MUST create it as a direct child of the Knowledge Base page and MUST link it from the `## Updates` section using the page-link-block format from [Knowledge Base Index Page](#knowledge-base-index-page).
+- MUST locate today's date section on the monthly page (`## <Day-abbr>, <Month> <Day-with-suffix>`); if missing, MUST insert a new H2 date heading at the very top of the monthly page so reverse chronological order from [Knowledge Base Updates Pages](#knowledge-base-updates-pages) is preserved.
+- MUST append a 2–4 bullet update under that date section covering, at minimum: count and database link of summarized articles, the wiki pages created (names with markdown links), and any new topic sections added to the index.
+- The update MUST follow [Knowledge Base Updates Pages](#knowledge-base-updates-pages) — markdown links throughout, terse, one bullet per category.
 
 ## Final Report
 
